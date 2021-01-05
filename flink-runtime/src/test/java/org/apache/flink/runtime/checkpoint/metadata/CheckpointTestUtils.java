@@ -126,14 +126,14 @@ public class CheckpointTestUtils {
                 }
 
                 if (hasKeyedBackend) {
+                    state.setManagedKeyedState(createDummyKeyGroupStateHandle(random, basePath));
+                }
+
+                if (hasKeyedStream) {
                     state.setRawKeyedState(
                             isIncremental && !isSavepoint(basePath)
                                     ? createDummyIncrementalKeyedStateHandle(random)
                                     : createDummyKeyGroupStateHandle(random, basePath));
-                }
-
-                if (hasKeyedStream) {
-                    state.setManagedKeyedState(createDummyKeyGroupStateHandle(random, basePath));
                 }
 
                 state.setInputChannelState(
