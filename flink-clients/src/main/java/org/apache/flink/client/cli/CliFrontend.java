@@ -96,6 +96,7 @@ public class CliFrontend {
     private static final String ACTION_CANCEL = "cancel";
     private static final String ACTION_STOP = "stop";
     private static final String ACTION_SAVEPOINT = "savepoint";
+    private static final String DYNAMIC_SCHEDULE = "dynamicSchedule";
 
     // configuration dir parameters
     private static final String CONFIG_DIRECTORY_FALLBACK_1 = "../conf";
