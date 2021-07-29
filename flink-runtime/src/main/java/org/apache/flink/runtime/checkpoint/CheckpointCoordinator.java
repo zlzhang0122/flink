@@ -862,11 +862,19 @@ public class CheckpointCoordinator {
      */
     private void onTriggerFailure(
             CheckpointTriggerRequest onCompletionPromise, Throwable throwable) {
-        final CheckpointException checkpointException =
-                getCheckpointException(
-                        CheckpointFailureReason.TRIGGER_CHECKPOINT_FAILURE, throwable);
-        onCompletionPromise.completeExceptionally(checkpointException);
-        onTriggerFailure((PendingCheckpoint) null, checkpointException);
+        Throwable rootThrowable = ExceptionUtils.stripCompletionException(throwable);
+        if (rootThrowable instanceof IOException) {
+            final CheckpointException checkpointException =
+                    getCheckpointException(CheckpointFailureReason.IO_EXCEPTION, rootThrowable);
+            onCompletionPromise.completeExceptionally(checkpointException);
+            onTriggerFailure((PendingCheckpoint) null, throwable);
+        } else {
+            final CheckpointException checkpointException =
+                    getCheckpointException(
+                            CheckpointFailureReason.TRIGGER_CHECKPOINT_FAILURE, throwable);
+            onCompletionPromise.completeExceptionally(checkpointException);
+            onTriggerFailure((PendingCheckpoint) null, checkpointException);
+        }
     }
 
     /**
@@ -892,9 +900,12 @@ public class CheckpointCoordinator {
                         job,
                         numUnsuccessful,
                         throwable);
-                final CheckpointException cause =
-                        getCheckpointException(
-                                CheckpointFailureReason.TRIGGER_CHECKPOINT_FAILURE, throwable);
+                CheckpointFailureReason defaultReason =
+                        CheckpointFailureReason.TRIGGER_CHECKPOINT_FAILURE;
+                if (throwable instanceof IOException) {
+                    defaultReason = CheckpointFailureReason.IO_EXCEPTION;
+                }
+                final CheckpointException cause = getCheckpointException(defaultReason, throwable);
                 synchronized (lock) {
                     abortPendingCheckpoint(checkpoint, cause);
                 }

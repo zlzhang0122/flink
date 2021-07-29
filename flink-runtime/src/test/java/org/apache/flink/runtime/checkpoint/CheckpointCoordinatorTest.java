@@ -109,6 +109,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.apache.flink.runtime.checkpoint.CheckpointFailureReason.CHECKPOINT_ASYNC_EXCEPTION;
 import static org.apache.flink.runtime.checkpoint.CheckpointFailureReason.CHECKPOINT_DECLINED;
 import static org.apache.flink.runtime.checkpoint.CheckpointFailureReason.CHECKPOINT_EXPIRED;
+import static org.apache.flink.runtime.checkpoint.CheckpointFailureReason.IO_EXCEPTION;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
 import static org.junit.Assert.assertEquals;
@@ -621,6 +622,36 @@ public class CheckpointCoordinatorTest extends TestLogger {
                 e.printStackTrace();
                 fail(e.getMessage());
             }
+        }
+    }
+
+    @Test
+    public void testIOExceptionCheckpointExceedsTolerableFailureNumber() throws Exception {
+        // create some mock Execution vertices that receive the checkpoint trigger messages
+        ExecutionGraph graph =
+                new CheckpointCoordinatorTestingUtils.CheckpointExecutionGraphBuilder()
+                        .addJobVertex(new JobVertexID())
+                        .addJobVertex(new JobVertexID())
+                        .build();
+
+        final String errorMsg = "Exceeded checkpoint failure tolerance number!";
+        CheckpointFailureManager checkpointFailureManager = getCheckpointFailureManager(errorMsg);
+        CheckpointCoordinator checkpointCoordinator =
+                getCheckpointCoordinator(graph, checkpointFailureManager);
+
+        try {
+            checkpointCoordinator.triggerCheckpoint(false);
+            manuallyTriggeredScheduledExecutor.triggerAll();
+
+            checkpointCoordinator.abortPendingCheckpoints(new CheckpointException(IO_EXCEPTION));
+
+            fail("Test failed.");
+        } catch (Exception e) {
+            // expected
+            assertTrue(e instanceof RuntimeException);
+            assertEquals(errorMsg, e.getMessage());
+        } finally {
+            checkpointCoordinator.shutdown();
         }
     }
 

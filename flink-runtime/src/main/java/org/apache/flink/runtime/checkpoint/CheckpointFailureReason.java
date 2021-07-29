@@ -81,6 +81,8 @@ public enum CheckpointFailureReason {
 
     FINALIZE_CHECKPOINT_FAILURE(false, "Failure to finalize checkpoint."),
 
+    IO_EXCEPTION(false, "Trigger checkpoint failure."),
+
     TRIGGER_CHECKPOINT_FAILURE(false, "Trigger checkpoint failure.");
 
     // ------------------------------------------------------------------------

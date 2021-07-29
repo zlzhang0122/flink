@@ -21,8 +21,10 @@ package org.apache.flink.runtime.checkpoint;
 import org.apache.flink.runtime.operators.coordination.OperatorCoordinator;
 import org.apache.flink.runtime.operators.coordination.OperatorInfo;
 import org.apache.flink.runtime.state.memory.ByteStreamStateHandle;
+import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.concurrent.FutureUtils;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -121,14 +123,17 @@ final class OperatorCoordinatorCheckpoints {
                 final Throwable error =
                         checkpoint.isDisposed() ? checkpoint.getFailureCause() : null;
 
+                CheckpointFailureReason reason = CheckpointFailureReason.TRIGGER_CHECKPOINT_FAILURE;
                 if (error != null) {
-                    throw new CheckpointException(
-                            errorMessage,
-                            CheckpointFailureReason.TRIGGER_CHECKPOINT_FAILURE,
-                            error);
+                    Throwable rootThrowable = ExceptionUtils.stripCompletionException(error);
+
+                    if (rootThrowable instanceof IOException) {
+                        reason = CheckpointFailureReason.IO_EXCEPTION;
+                    }
+
+                    throw new CheckpointException(errorMessage, reason, error);
                 } else {
-                    throw new CheckpointException(
-                            errorMessage, CheckpointFailureReason.TRIGGER_CHECKPOINT_FAILURE);
+                    throw new CheckpointException(errorMessage, reason);
                 }
             }
         }
